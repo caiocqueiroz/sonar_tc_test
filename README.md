@@ -12,6 +12,7 @@ docker run --name tcsrv-env-test-sonartc \
 # Run Agent TeamCity
 docker run -e SERVER_URL="http://tcsrv-env-test-sonartc:8111" \
     -v ~/data/agent:/data/teamcity_agent/conf \
+    --user 0 \
     jetbrains/teamcity-agent
 
 # Create the docker network
@@ -35,3 +36,18 @@ dotnet tool install --global dotnet-sonarscanner
 # Add dotnet tools to PATH (add this to ~/.bashrc for persistence)
 export PATH="$PATH:/root/.dotnet/tools"
 source ~/.bashrc
+
+
+# create sonar volumes 
+docker volume create --name sonarqube_data
+docker volume create --name sonarqube_logs
+docker volume create --name sonarqube_extensions
+
+# start SonarQube
+docker run --rm \
+    -p 9000:9000 \
+    -v sonarqube_extensions:/opt/sonarqube/extensions \
+    sonarqube
+
+# Token for SonarQube
+sqa_55225362b671f1553da99fa0e4576a120db04877
