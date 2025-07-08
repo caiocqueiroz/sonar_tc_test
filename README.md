@@ -143,3 +143,9 @@ To generate an HTML coverage report:
 ```bash
 ~/.dotnet/tools/reportgenerator -reports:"./HelloWorld.Tests/coverage.opencover.xml" -targetdir:"./CoverageReport" -reporttypes:Html
 ```
+
+# Important Notes
+
+1. The test project (HelloWorld.Tests) is configured to use .NET 8.0 to ensure compatibility with the TeamCity agent which has .NET SDK 8.0 installed.
+2. Make sure all projects in the solution use compatible .NET versions.
+3. If you need to use a newer version of .NET, ensure that the appropriate SDK is installed on the TeamCity agent.
