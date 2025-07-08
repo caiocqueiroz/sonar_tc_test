@@ -12,6 +12,9 @@ To set up the TeamCity build configuration, follow these steps:
 
 ## Docker Setup Instructions
 
+### TeamCity Server and Agent Setup
+
+```bash
 # Run TeamCity Server
 docker run --name tcsrv-env-test-sonartc \
     -v ~/data:/data/teamcity_server/datadir \
@@ -31,9 +34,13 @@ docker run -e SERVER_URL="http://tcsrv-env-test-sonartc:8111" \
 docker network create docker-networks
 
 # Connect to the Docker network
- docker network connect docker-networks container-id
+docker network connect docker-networks container-id
+```
 
- apt-get update
+### .NET SDK Installation
+
+```bash
+apt-get update
 
 # Install .NET SDK (if not already installed)
 apt-get install -y wget apt-transport-https
@@ -51,73 +58,107 @@ dotnet tool install --global dotnet-sonarscanner
 
 # Install reportgenerator for code coverage reports
 dotnet tool install -g dotnet-reportgenerator-globaltool
+```
 
-# Note: The coverlet.msbuild package should be added to the test project file (HelloWorld.Tests.csproj)
-# This is done in the source code by adding the following PackageReference:
-# <PackageReference Include="coverlet.msbuild" Version="6.0.4">
-#   <PrivateAssets>all</PrivateAssets>
-#   <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-# </PackageReference>
+### Required Package Configuration
 
+> **Note:** The coverlet.msbuild package should be added to the test project file (HelloWorld.Tests.csproj). This is done in the source code by adding the following PackageReference:
+
+```xml
+<PackageReference Include="coverlet.msbuild" Version="6.0.4">
+  <PrivateAssets>all</PrivateAssets>
+  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+</PackageReference>
+```
+
+### Environment Setup
+
+```bash
 # Add dotnet tools to PATH (add this to ~/.bashrc for persistence)
 export PATH="$PATH:/root/.dotnet/tools"
 source ~/.bashrc
+```
 
+### SonarQube Setup
 
-# create sonar volumes 
+```bash
+# Create sonar volumes 
 docker volume create --name sonarqube_data
 docker volume create --name sonarqube_logs
 docker volume create --name sonarqube_extensions
 
-# start SonarQube
+# Start SonarQube
 docker run --rm \
     -p 9000:9000 \
     -v sonarqube_extensions:/opt/sonarqube/extensions \
     sonarqube
+```
 
-# Token for SonarQube
+### SonarQube Authentication
+
+**SonarQube Token:**
+```
 sqa_55225362b671f1553da99fa0e4576a120db04877
+```
 
-# TeamCity Build Configuration Steps
+> **Important:** Keep this token secure and consider using environment variables or secure storage in production environments.
 
-## 1. SonarQube Begin Analysis
-Command: dotnet
-Parameters: >-
-  sonarscanner begin
-  /k:"HelloWorld"
-  /d:sonar.host.url="http://sonarqube:9000"
-  /d:sonar.login="sqa_55225362b671f1553da99fa0e4576a120db04877"
-  /d:sonar.cs.opencover.reportsPaths="%system.teamcity.build.checkoutDir%/HelloWorld.Tests/coverage.opencover.xml"
+## TeamCity Build Configuration Steps
 
-## 2. Build Step
-Command: dotnet
-Parameters: build
+### 1. SonarQube Begin Analysis
+**Command:** `dotnet`
 
-## 3. Test Step
-Command: dotnet
-Parameters: >-
-  test
-  --logger:"trx;LogFileName=testresults.trx"
-  /p:CollectCoverage=true
-  /p:CoverletOutputFormat=opencover
-  /p:CoverletOutput=./coverage.opencover.xml
-  /p:Include="[HelloWorld]*"
-  /p:Exclude="[HelloWorld.Tests]*"
+**Parameters:**
+```
+sonarscanner begin
+/k:"HelloWorld"
+/d:sonar.host.url="http://sonarqube:9000"
+/d:sonar.login="sqa_55225362b671f1553da99fa0e4576a120db04877"
+/d:sonar.cs.opencover.reportsPaths="%system.teamcity.build.checkoutDir%/HelloWorld.Tests/coverage.opencover.xml"
+```
 
-## 4. Report Generator (Optional for HTML reports)
-Command: ~/.dotnet/tools/reportgenerator
-Parameters: >-
-  "-reports:%system.teamcity.build.checkoutDir%/HelloWorld.Tests/coverage.opencover.xml"
-  "-targetdir:%system.teamcity.build.checkoutDir%/CoverageReport"
-  "-reporttypes:Html"
+### 2. Build Step
+**Command:** `dotnet`
 
-## 5. SonarQube End Analysis
-Command: dotnet
-Parameters: >-
-  sonarscanner end
-  /d:sonar.login="sqa_55225362b671f1553da99fa0e4576a120db04877"
+**Parameters:**
+```
+build
+```
 
-# Unit Tests
+### 3. Test Step
+**Command:** `dotnet`
+
+**Parameters:**
+```
+test
+--logger:"trx;LogFileName=testresults.trx"
+/p:CollectCoverage=true
+/p:CoverletOutputFormat=opencover
+/p:CoverletOutput=./coverage.opencover.xml
+/p:Include="[HelloWorld]*"
+/p:Exclude="[HelloWorld.Tests]*"
+```
+
+### 4. Report Generator (Optional for HTML reports)
+**Command:** `~/.dotnet/tools/reportgenerator`
+
+**Parameters:**
+```
+"-reports:%system.teamcity.build.checkoutDir%/HelloWorld.Tests/coverage.opencover.xml"
+"-targetdir:%system.teamcity.build.checkoutDir%/CoverageReport"
+"-reporttypes:Html"
+```
+
+### 5. SonarQube End Analysis
+**Command:** `dotnet`
+
+**Parameters:**
+```
+sonarscanner end
+/d:sonar.login="sqa_55225362b671f1553da99fa0e4576a120db04877"
+```
+
+## Unit Tests
 
 The project includes comprehensive unit tests that cover most of the application code. The tests use:
 
@@ -148,7 +189,7 @@ To generate an HTML coverage report:
 ~/.dotnet/tools/reportgenerator -reports:"./HelloWorld.Tests/coverage.opencover.xml" -targetdir:"./CoverageReport" -reporttypes:Html
 ```
 
-# Important Notes
+## Important Notes
 
 1. The test project (HelloWorld.Tests) is configured to use .NET 8.0 to ensure compatibility with the TeamCity agent which has .NET SDK 8.0 installed.
 2. Make sure all projects in the solution use compatible .NET versions.
